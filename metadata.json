@@ -1,0 +1,6 @@
+{
+  "name": "Calendar",
+  "description": "Modern color-coded calendar and notes app with customizable repeating reminders, event acknowledgment, birthday tracking, and Supabase synchronization.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
