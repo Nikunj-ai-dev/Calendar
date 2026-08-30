@@ -80,6 +80,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     private val _showQuickAddDialog = MutableStateFlow(false)
     val showQuickAddDialog: StateFlow<Boolean> = _showQuickAddDialog.asStateFlow()
 
+    private val _showBirthdayDialog = MutableStateFlow(false)
+    val showBirthdayDialog: StateFlow<Boolean> = _showBirthdayDialog.asStateFlow()
+
     private val _showNoteDialog = MutableStateFlow(false)
     val showNoteDialog: StateFlow<Boolean> = _showNoteDialog.asStateFlow()
 
@@ -346,6 +349,14 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         _showQuickAddDialog.value = false
     }
 
+    fun openAddBirthdayDialog() {
+        _showBirthdayDialog.value = true
+    }
+
+    fun closeBirthdayDialog() {
+        _showBirthdayDialog.value = false
+    }
+
     fun openAddNoteDialog(dateStr: String? = null) {
         val defaultDate = dateStr ?: dateFormat.format(_selectedDate.value.time)
         _editingNote.value = NoteEntity(
@@ -413,6 +424,85 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             closeEventDialog()
             _snackbarMessage.value = "Event '${finalizedEvent.title}' saved"
         }
+    }
+
+    fun saveBirthdayEvent(
+        personName: String,
+        birthDateIso: String, // "YYYY-MM-DD" or "MM-DD"
+        relationship: String = "Friend",
+        giftIdeas: String = "",
+        notes: String = "",
+        reminderMinutesBefore: Int = 60, // Default 1 hour before 9 AM
+        color: String = "#EC4899"
+    ) {
+        viewModelScope.launch {
+            val user = currentUser.value ?: return@launch
+            val parts = birthDateIso.split("-")
+            val (month, day, birthYear) = if (parts.size == 3) {
+                Triple(parts[1].toInt() - 1, parts[2].toInt(), parts[0].toIntOrNull())
+            } else if (parts.size == 2) {
+                Triple(parts[0].toInt() - 1, parts[1].toInt(), null)
+            } else {
+                Triple(Calendar.getInstance().get(Calendar.MONTH), Calendar.getInstance().get(Calendar.DAY_OF_MONTH), null)
+            }
+
+            val nowCal = Calendar.getInstance()
+            val currentYear = nowCal.get(Calendar.YEAR)
+
+            val bdayCal = Calendar.getInstance().apply {
+                set(Calendar.YEAR, currentYear)
+                set(Calendar.MONTH, month)
+                set(Calendar.DAY_OF_MONTH, day)
+                set(Calendar.HOUR_OF_DAY, 9)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+
+            val bdayTitle = if (personName.isNotBlank()) "🎂 $personName's Birthday" else "🎂 Birthday"
+            val eventId = "bday_${UUID.randomUUID().toString().take(8)}"
+
+            val metadataMap = mutableMapOf<String, Any?>(
+                "type" to "birthday",
+                "person_name" to personName,
+                "birth_date" to birthDateIso,
+                "relationship" to relationship,
+                "gift_ideas" to giftIdeas,
+                "notes" to notes
+            )
+            if (birthYear != null) {
+                metadataMap["birth_year"] = birthYear
+            }
+
+            val bdayEvent = EventEntity(
+                id = eventId,
+                userId = user.id,
+                title = bdayTitle,
+                description = if (notes.isNotBlank()) notes else "Celebration for $personName ($relationship). Don't forget to wish them!",
+                location = "Celebration",
+                startTime = bdayCal.timeInMillis,
+                endTime = bdayCal.timeInMillis + (12 * 3600 * 1000L),
+                allDay = true,
+                category = "Birthday",
+                color = color,
+                isRecurring = true,
+                recurrenceRule = "YEARLY",
+                reminderMinutesBefore = reminderMinutesBefore,
+                repeatNotificationCount = 3,
+                repeatGapMinutes = 15,
+                isAcknowledged = false,
+                metadata = metadataMap
+            )
+
+            calendarRepo.createOrUpdateEvent(bdayEvent)
+            closeBirthdayDialog()
+            _snackbarMessage.value = "🎂 Birthday for $personName added with yearly reminder!"
+        }
+    }
+
+    fun testNotification() {
+        NotificationHelper.sendImmediateTestNotification(getApplication())
+        _snackbarMessage.value = "🔔 Test notification sent! Check your notification shade."
     }
 
     fun quickAddEvent(title: String, startTimeEpoch: Long, category: String = "Personal", color: String = "#10B981") {

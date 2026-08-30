@@ -25,8 +25,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.outlined.AccessTime
@@ -95,6 +98,16 @@ fun EventDialog(
     var allDay by remember { mutableStateOf(event.allDay) }
     var category by remember { mutableStateOf(event.category ?: "Work") }
     var colorHex by remember { mutableStateOf(event.color) }
+
+    // Additional important event features stored in metadata
+    var priority by remember {
+        mutableStateOf(event.metadata?.get("priority") as? String ?: "Normal")
+    }
+    val priorityOptions = listOf("Low", "Normal", "High", "Urgent")
+
+    var meetingUrl by remember {
+        mutableStateOf(event.metadata?.get("meeting_url") as? String ?: "")
+    }
 
     // Recurrence
     var isRecurring by remember { mutableStateOf(event.isRecurring) }
@@ -576,7 +589,54 @@ fun EventDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Location & Description
+                // Priority Selection
+                Text(
+                    text = "Priority",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    priorityOptions.forEach { opt ->
+                        val isSelected = priority.equals(opt, ignoreCase = true)
+                        val chipColor = when (opt) {
+                            "Urgent" -> Color(0xFFEF4444)
+                            "High" -> Color(0xFFF97316)
+                            "Normal" -> Color(0xFF3B82F6)
+                            else -> Color(0xFF10B981)
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { priority = opt },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) chipColor else chipColor.copy(alpha = 0.12f),
+                            border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, chipColor.copy(alpha = 0.3f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = opt,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) Color.White else chipColor
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Location, Meeting Link & Description
                 OutlinedTextField(
                     value = location,
                     onValueChange = { location = it },
@@ -589,82 +649,103 @@ fun EventDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Description & Notes") },
-                        leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
-                        minLines = 2,
-                        maxLines = 4,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-
-                // Fixed Bottom Action Bar (Safe from device navigation bar)
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                Surface(
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 4.dp,
+                OutlinedTextField(
+                    value = meetingUrl,
+                    onValueChange = { meetingUrl = it },
+                    label = { Text("Meeting / Video Link (Optional)") },
+                    placeholder = { Text("https://meet.google.com/...") },
+                    leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (onDelete != null && event.title.isNotBlank()) {
-                            OutlinedButton(
-                                onClick = { onDelete(event.id) },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier
-                                    .height(48.dp)
-                                    .testTag("delete_event_btn")
-                            ) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Delete")
-                            }
-                        }
+                )
 
-                        Button(
-                            onClick = {
-                                if (title.isNotBlank()) {
-                                    onSave(
-                                        event.copy(
-                                            title = title.trim(),
-                                            description = description.ifBlank { null },
-                                            location = location.ifBlank { null },
-                                            startTime = startTime,
-                                            endTime = if (allDay) null else endTime,
-                                            allDay = allDay,
-                                            category = category,
-                                            color = colorHex,
-                                            isRecurring = isRecurring,
-                                            recurrenceRule = if (isRecurring) recurrenceRule else null,
-                                            reminderMinutesBefore = reminderMinutes,
-                                            repeatNotificationCount = repeatCount,
-                                            repeatGapMinutes = repeatGapMinutes,
-                                            isAcknowledged = false,
-                                            updatedAt = System.currentTimeMillis()
-                                        )
-                                    )
-                                }
-                            },
-                            enabled = title.isNotBlank(),
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description & Notes") },
+                    leadingIcon = { Icon(Icons.Outlined.Description, contentDescription = null) },
+                    minLines = 2,
+                    maxLines = 4,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            // Fixed Bottom Action Bar (Safely padded above device navigation buttons / gestures)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (onDelete != null && event.title.isNotBlank()) {
+                        OutlinedButton(
+                            onClick = { onDelete(event.id) },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                             shape = RoundedCornerShape(14.dp),
                             modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .testTag("save_event_btn")
+                                .height(50.dp)
+                                .testTag("delete_event_btn")
                         ) {
-                            Text("Save Event", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
                         }
                     }
+
+                    Button(
+                        onClick = {
+                            if (title.isNotBlank()) {
+                                val updatedMetadata = (event.metadata?.toMutableMap() ?: mutableMapOf()).apply {
+                                    put("priority", priority)
+                                    if (meetingUrl.isNotBlank()) put("meeting_url", meetingUrl.trim()) else remove("meeting_url")
+                                }
+
+                                onSave(
+                                    event.copy(
+                                        title = title.trim(),
+                                        description = description.ifBlank { null },
+                                        location = location.ifBlank { null },
+                                        startTime = startTime,
+                                        endTime = if (allDay) null else endTime,
+                                        allDay = allDay,
+                                        category = category,
+                                        color = colorHex,
+                                        isRecurring = isRecurring,
+                                        recurrenceRule = if (isRecurring) recurrenceRule else null,
+                                        reminderMinutesBefore = reminderMinutes,
+                                        repeatNotificationCount = repeatCount,
+                                        repeatGapMinutes = repeatGapMinutes,
+                                        isAcknowledged = false,
+                                        metadata = updatedMetadata,
+                                        updatedAt = System.currentTimeMillis()
+                                    )
+                                )
+                            }
+                        },
+                        enabled = title.isNotBlank(),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(50.dp)
+                            .testTag("save_event_btn")
+                    ) {
+                        Text("Save Event", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
+            }
             }
         }
     }

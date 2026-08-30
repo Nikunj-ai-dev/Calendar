@@ -69,6 +69,7 @@ data class SupabaseEventDto(
     @Json(name = "completed") val completed: Boolean = false,
     @Json(name = "is_recurring") val isRecurring: Boolean = false,
     @Json(name = "recurrence_rule") val recurrenceRule: String? = null,
+    @Json(name = "metadata") val metadata: Map<String, Any?>? = null,
     @Json(name = "created_at") val createdAt: String? = null,
     @Json(name = "updated_at") val updatedAt: String? = null
 )

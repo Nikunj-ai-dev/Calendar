@@ -87,6 +87,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.auth.AuthScreen
+import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.NotificationsActive
+import com.example.ui.calendar.AddBirthdayDialog
 import com.example.ui.calendar.AgendaView
 import com.example.ui.calendar.CalendarViewMode
 import com.example.ui.calendar.CalendarViewModel
@@ -142,6 +145,7 @@ fun MainScreen(
     val showEventDialog by viewModel.showEventDialog.collectAsState()
     val editingEvent by viewModel.editingEvent.collectAsState()
     val showQuickAddDialog by viewModel.showQuickAddDialog.collectAsState()
+    val showBirthdayDialog by viewModel.showBirthdayDialog.collectAsState()
     val showNoteDialog by viewModel.showNoteDialog.collectAsState()
     val editingNote by viewModel.editingNote.collectAsState()
     val reschedulingEvent by viewModel.reschedulingEvent.collectAsState()
@@ -340,6 +344,26 @@ fun MainScreen(
                     Spacer(modifier = Modifier.weight(1f))
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    NavigationDrawerItem(
+                        icon = { Text("🎂", fontSize = 16.sp) },
+                        label = { Text("Add Birthday Event") },
+                        selected = false,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            viewModel.openAddBirthdayDialog()
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        icon = { Icon(Icons.Filled.NotificationsActive, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        label = { Text("Test Notification Alert") },
+                        selected = false,
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            viewModel.testNotification()
+                        }
+                    )
 
                     NavigationDrawerItem(
                         icon = { Icon(if (isDarkMode) Icons.Filled.LightMode else Icons.Filled.DarkMode, contentDescription = null) },
@@ -555,6 +579,18 @@ fun MainScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Birthday quick add button
+                    FilledIconButton(
+                        onClick = { viewModel.openAddBirthdayDialog() },
+                        modifier = Modifier.size(44.dp).testTag("birthday_fab"),
+                        shape = CircleShape,
+                        colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                            containerColor = Color(0xFFFCE7F3)
+                        )
+                    ) {
+                        Text("🎂", fontSize = 18.sp)
+                    }
+
                     // Quick add lightning button
                     FilledIconButton(
                         onClick = { viewModel.openQuickAddDialog() },
@@ -709,6 +745,15 @@ fun MainScreen(
             onDismiss = { viewModel.closeQuickAddDialog() },
             onQuickAdd = { title, startEpoch, cat, col ->
                 viewModel.quickAddEvent(title, startEpoch, cat, col)
+            }
+        )
+    }
+
+    if (showBirthdayDialog) {
+        AddBirthdayDialog(
+            onDismiss = { viewModel.closeBirthdayDialog() },
+            onSaveBirthday = { name, bdayIso, rel, gifts, notes, remMins, col ->
+                viewModel.saveBirthdayEvent(name, bdayIso, rel, gifts, notes, remMins, col)
             }
         )
     }

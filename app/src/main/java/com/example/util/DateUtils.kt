@@ -172,6 +172,75 @@ object DateUtils {
         return list
     }
 
+    fun getNextOccurrenceTime(startTimeEpoch: Long, isRecurring: Boolean, recurrenceRule: String?, reminderMinutesBefore: Int = 0): Long {
+        val now = System.currentTimeMillis()
+        val originalCal = Calendar.getInstance().apply { timeInMillis = startTimeEpoch }
+        val triggerOffset = reminderMinutesBefore * 60 * 1000L
+
+        // If not recurring, return original startTime
+        if (!isRecurring && recurrenceRule.isNullOrBlank()) {
+            return startTimeEpoch
+        }
+
+        val rule = recurrenceRule?.uppercase() ?: "YEARLY"
+        return when {
+            rule.contains("YEAR") || rule.contains("BIRTHDAY") -> {
+                val cal = Calendar.getInstance().apply {
+                    set(Calendar.MONTH, originalCal.get(Calendar.MONTH))
+                    set(Calendar.DAY_OF_MONTH, originalCal.get(Calendar.DAY_OF_MONTH))
+                    set(Calendar.HOUR_OF_DAY, originalCal.get(Calendar.HOUR_OF_DAY))
+                    set(Calendar.MINUTE, originalCal.get(Calendar.MINUTE))
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                // If this year's trigger has already passed, move to next year
+                if (cal.timeInMillis - triggerOffset < now - 60000L) {
+                    cal.add(Calendar.YEAR, 1)
+                }
+                cal.timeInMillis
+            }
+            rule.contains("MONTH") -> {
+                val cal = Calendar.getInstance().apply {
+                    set(Calendar.DAY_OF_MONTH, originalCal.get(Calendar.DAY_OF_MONTH).coerceAtMost(getActualMaximum(Calendar.DAY_OF_MONTH)))
+                    set(Calendar.HOUR_OF_DAY, originalCal.get(Calendar.HOUR_OF_DAY))
+                    set(Calendar.MINUTE, originalCal.get(Calendar.MINUTE))
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                if (cal.timeInMillis - triggerOffset < now - 60000L) {
+                    cal.add(Calendar.MONTH, 1)
+                }
+                cal.timeInMillis
+            }
+            rule.contains("WEEK") -> {
+                val cal = Calendar.getInstance().apply {
+                    set(Calendar.DAY_OF_WEEK, originalCal.get(Calendar.DAY_OF_WEEK))
+                    set(Calendar.HOUR_OF_DAY, originalCal.get(Calendar.HOUR_OF_DAY))
+                    set(Calendar.MINUTE, originalCal.get(Calendar.MINUTE))
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                if (cal.timeInMillis - triggerOffset < now - 60000L) {
+                    cal.add(Calendar.WEEK_OF_YEAR, 1)
+                }
+                cal.timeInMillis
+            }
+            rule.contains("DAILY") || rule.contains("DAY") -> {
+                val cal = Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, originalCal.get(Calendar.HOUR_OF_DAY))
+                    set(Calendar.MINUTE, originalCal.get(Calendar.MINUTE))
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                if (cal.timeInMillis - triggerOffset < now - 60000L) {
+                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                }
+                cal.timeInMillis
+            }
+            else -> startTimeEpoch
+        }
+    }
+
     fun getBirthdayCountdownText(birthDateStr: String?): String? {
         if (birthDateStr.isNullOrBlank()) return null
         return try {

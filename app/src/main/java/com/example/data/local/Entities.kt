@@ -18,6 +18,7 @@ data class CalendarEntity(
     val userId: String,
     val name: String = "My Calendar",
     val color: String = "#386B01",
+    val metadata: Map<String, Any?>? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )
@@ -43,6 +44,7 @@ data class EventEntity(
     val repeatGapMinutes: Int = 5, // gap in minutes between repeated alarms
     val isAcknowledged: Boolean = false, // Stops repeating notifications when acknowledged
     val notificationsSentCount: Int = 0,
+    val metadata: Map<String, Any?>? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
 )

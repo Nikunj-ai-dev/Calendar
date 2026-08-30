@@ -71,6 +71,7 @@ class CalendarRepository(private val context: Context, private val authRepositor
                         repeatNotificationCount = 3,
                         repeatGapMinutes = 5,
                         isAcknowledged = false,
+                        metadata = dto.metadata,
                         updatedAt = System.currentTimeMillis()
                     )
                 }
@@ -176,7 +177,8 @@ class CalendarRepository(private val context: Context, private val authRepositor
             color = event.color,
             completed = event.completed,
             isRecurring = event.isRecurring,
-            recurrenceRule = event.recurrenceRule
+            recurrenceRule = event.recurrenceRule,
+            metadata = event.metadata
         )
 
         try {
